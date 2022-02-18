@@ -1805,7 +1805,7 @@ CONTAINS
        RETURN
     ENDIF
 
-    print*, '### Define_Diagnostics: NNDIAGN: ', N
+    !print*, '### Define_Diagnostics: NNDIAGN: ', N
 
     ! If there are no diagnostics defined yet, define some default
     ! diagnostics below. These are simply the overall emissions

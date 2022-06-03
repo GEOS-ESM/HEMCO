@@ -747,7 +747,9 @@ CONTAINS
 !
 #include "MAPL_Generic.h"
     USE ESMF
-    USE MAPL_Mod
+    USE ESMFL_MOD
+    USE MAPL_GenericMod
+    USE MAPL_ErrorHandlingMod
     USE HCO_STATE_MOD,   ONLY : Hco_State
 !
 ! !ARGUMENTS:

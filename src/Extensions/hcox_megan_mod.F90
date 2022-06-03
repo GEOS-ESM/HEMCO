@@ -231,13 +231,11 @@ MODULE HCOX_MEGAN_MOD
      ! Normalization factor
      REAL(hp), POINTER       :: NORM_FAC(:)
 
-     ! New restart variables (ckeller, 11/05/2015)
+     ! Restart variables
      REAL(sp), POINTER       :: T_LASTXDAYS    (:,:) ! Avg. temp  of last X days
      REAL(sp), POINTER       :: T_LAST24H      (:,:) ! Avg. temp  of last 24 hrs
      REAL(sp), POINTER       :: PARDF_LASTXDAYS(:,:) ! Avg. PARDF of last X days
      REAL(sp), POINTER       :: PARDR_LASTXDAYS(:,:) ! Avg. PARDR of last X days
-
-     ! previous LAI values (ckeller, 10/09/2014)
      REAL(sp), POINTER       :: LAI_PREVDAY(:,:)     ! LAI of prev. day
 
      ! Array for PFT
@@ -3329,6 +3327,25 @@ CONTAINS
                      0.08_hp, 0.08_hp, 0.08_hp, 0.08_hp, 0.08_hp, &
                      0.08_hp, 0.20_hp, 0.20_hp, 0.20_hp, 0.20_hp/)
 
+    ! Set AEF arrays to zero
+    Inst%AEF_APIN(:,:) = 0.0_hp
+    Inst%AEF_MYRC(:,:) = 0.0_hp
+    Inst%AEF_OMON(:,:) = 0.0_hp
+    Inst%AEF_FARN(:,:) = 0.0_hp
+    Inst%AEF_BCAR(:,:) = 0.0_hp
+    Inst%AEF_OSQT(:,:) = 0.0_hp
+    Inst%AEF_MOH (:,:) = 0.0_hp
+    Inst%AEF_ACET(:,:) = 0.0_hp
+    Inst%AEF_EOH (:,:) = 0.0_hp
+    Inst%AEF_CH2O(:,:) = 0.0_hp
+    Inst%AEF_ALD2(:,:) = 0.0_hp
+    Inst%AEF_FAXX(:,:) = 0.0_hp
+    Inst%AEF_AAXX(:,:) = 0.0_hp
+    Inst%AEF_C2H4(:,:) = 0.0_hp
+    Inst%AEF_TOLU(:,:) = 0.0_hp
+    Inst%AEF_HCNX(:,:) = 0.0_hp
+    Inst%AEF_PRPE(:,:) = 0.0_hp
+
     ! Loop through plant types
     DO P = 1, 15
 
@@ -3884,28 +3901,28 @@ CONTAINS
        CALL HCO_ERROR( 'T_LAST24H', RC )
        RETURN
     ENDIF
-    Inst%T_LAST24H = 0.0_hp
+    Inst%T_LAST24H = 0.0_sp
 
     ALLOCATE( Inst%T_LASTXDAYS( NX, NY ), STAT=AS )
     IF ( AS /= 0 ) THEN
        CALL HCO_ERROR( 'T_LASTXDAYS', RC )
        RETURN
     ENDIF
-    Inst%T_LASTXDAYS = 0.0_hp
+    Inst%T_LASTXDAYS = 0.0_sp
 
     ALLOCATE( Inst%PARDR_LASTXDAYS( NX, NY ), STAT=AS )
     IF ( AS /= 0 ) THEN
        CALL HCO_ERROR( 'PARDR_LASTXDAYS', RC )
        RETURN
     ENDIF
-    Inst%PARDR_LASTXDAYS = 0.0_hp
+    Inst%PARDR_LASTXDAYS = 0.0_sp
 
     ALLOCATE( Inst%PARDF_LASTXDAYS( NX, NY ), STAT=AS )
     IF ( AS /= 0 ) THEN
        CALL HCO_ERROR( 'PARDF_LASTXDAYS', RC )
        RETURN
     ENDIF
-    Inst%PARDF_LASTXDAYS = 0.0_hp
+    Inst%PARDF_LASTXDAYS = 0.0_sp
 
     ALLOCATE( Inst%LAI_PREVDAY( NX, NY ), STAT=AS )
     IF ( AS /= 0 ) THEN
@@ -3913,13 +3930,6 @@ CONTAINS
       RETURN
     ENDIF
     Inst%LAI_PREVDAY = 0.0_sp
-
-    ALLOCATE( Inst%ARRAY_16( NX, NY, 16 ), STAT=AS )
-    IF ( AS /= 0 ) THEN
-      CALL HCO_ERROR( 'ARRAY_16', RC )
-      RETURN
-    ENDIF
-    Inst%ARRAY_16 = 0.0_hp
 
     ! Normalization factor
     ! There should be a different normalization factor for each compound, but

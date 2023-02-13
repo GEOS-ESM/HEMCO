@@ -433,8 +433,11 @@ CONTAINS
        IF ( SeaConc(I,J) < 0.0_hp ) SeaConc(I,J) = 0.0_hp
 
        ! Do only over the ocean:
-       IF ( HCO_LANDTYPE( ExtState%WLI%Arr%Val(I,J), &
-                          ExtState%FRLANDIC%Arr%Val(I,J) ) == 0 ) THEN
+       IF ( HCO_LANDTYPE( ExtState%FRLAND%Arr%Val(I,J),   &
+                          ExtState%FRLANDIC%Arr%Val(I,J), &
+                          ExtState%FROCEAN%Arr%Val(I,J),  &
+                          ExtState%FRSEAICE%Arr%Val(I,J), &
+                          ExtState%FRLAKE%Arr%Val(I,J)) == 0 ) THEN
 
           !-----------------------------------------------------------
           ! Get grid box and species specific quantities
@@ -872,8 +875,11 @@ CONTAINS
     ExtState%U10M%DoUse        = .TRUE.
     ExtState%V10M%DoUse        = .TRUE.
     ExtState%TSKIN%DoUse       = .TRUE.
+    ExtState%FRLAND%DoUse      = .TRUE.
     ExtState%FRLANDIC%DoUse    = .TRUE.
-    ExtState%WLI%DoUse         = .TRUE.
+    ExtState%FROCEAN%DoUse     = .TRUE.
+    ExtState%FRSEAICE%DoUse    = .TRUE.
+    ExtState%FRLAKE%DoUse      = .TRUE.
     IF ( HcoState%Options%PBL_DRYDEP ) THEN
        ExtState%FRAC_OF_PBL%DoUse = .TRUE.
     ENDIF
@@ -1098,16 +1104,29 @@ CONTAINS
     ! Instance-specific deallocation
     IF ( ASSOCIATED(Inst) ) THEN
 
+       !---------------------------------------------------------------------
+       ! Deallocate fields of Inst before popping off from the list
+       ! in order to avoid memory leaks (Bob Yantosca (17 Aug 2022)
+       !---------------------------------------------------------------------
+       IF ( ASSOCIATED( Inst%OcSpecs ) ) THEN
+          DEALLOCATE( Inst%OcSpecs )
+       ENDIF
+       Inst%OcSpecs => NULL()
+
+       !---------------------------------------------------------------------
        ! Pop off instance from list
+       !---------------------------------------------------------------------
        IF ( ASSOCIATED(PrevInst) ) THEN
-          IF ( ASSOCIATED( Inst%OcSpecs )) DEALLOCATE( Inst%OcSpecs )
           PrevInst%NextInst => Inst%NextInst
        ELSE
           AllInst => Inst%NextInst
        ENDIF
        DEALLOCATE(Inst)
-       Inst => NULL()
     ENDIF
+
+    ! Free pointers before exiting
+    PrevInst => NULL()
+    Inst     => NULL()
 
    END SUBROUTINE InstRemove
 !EOC

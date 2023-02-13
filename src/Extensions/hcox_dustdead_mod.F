@@ -371,7 +371,7 @@
       ! CALL DUST MOBILIZATION SCHEME
       !=================================================================
 
-      ! Make OROGRAPHY array from GEOS-CHEM LWI
+      ! Make OROGRAPHY array (0=Ocean; 1=Land; 2=Ice)
       CALL GET_ORO( HcoState, ExtState, OROGRAPHY, RC )
       IF ( RC /= HCO_SUCCESS ) THEN
           CALL HCO_ERROR( 'ERROR 9', RC, THISLOC=LOC )
@@ -964,8 +964,11 @@
       ExtState%SNOWHGT%DoUse = .TRUE.
       ExtState%USTAR%DoUse   = .TRUE.
       ExtState%Z0%DoUse      = .TRUE.
-      ExtState%FRLANDIC%DoUse    = .TRUE.
-      ExtState%WLI%DoUse     = .TRUE.
+      ExtState%FRLAND%DoUse  = .TRUE.
+      ExtState%FRLANDIC%DoUse= .TRUE.
+      ExtState%FROCEAN%DoUse = .TRUE.
+      ExtState%FRSEAICE%DoUse= .TRUE.
+      ExtState%FRLAKE%DoUse  = .TRUE.
 
       ! Leave w/ success
       Inst => NULL()
@@ -2146,7 +2149,8 @@
 !
 !******************************************************************************
 !  Subroutine GET_ORO creates a 2D orography array, OROGRAPHY, from the
-!  GMAO LWI fields.  Ocean= 0; Land=1; ice=2. (tdf, bmy, 3/30/04, 8/17/05)
+!  GMAO surface type fraction fields, based on definition of GMAO LWI, with
+!  modification to qualify land ice as ice. Ocean=0 (no ice); Land=1; Ice=2.
 !
 !  Arguments as Output:
 !  ============================================================================
@@ -2182,9 +2186,12 @@
       DO J = 1, HcoState%NY
       DO I = 1, HcoState%NX
 
-         ! Set orography to land type
-         OROGRAPHY (I,J) = HCO_LANDTYPE( ExtState%WLI%Arr%Val(I,J),
-     &                             ExtState%FRLANDIC%Arr%Val(I,J) )
+         ! Set orography to from fraction land type
+         OROGRAPHY (I,J) = HCO_LANDTYPE( ExtState%FRLAND%Arr%Val(I,J),
+     &                                   ExtState%FRLANDIC%Arr%Val(I,J),
+     &                                   ExtState%FROCEAN%Arr%Val(I,J),
+     &                                   ExtState%FRSEAICE%Arr%Val(I,J),
+     &                                   ExtState%FRLAKE%Arr%Val(I,J) )
 
       ENDDO
       ENDDO
@@ -5659,73 +5666,112 @@ c Fix up for negative argument, erf, etc.
       ! Instance-specific deallocation
       IF ( ASSOCIATED(Inst) ) THEN
 
-      !-----------------------------------------------------------------
-      ! Nullify pointers
-      !-----------------------------------------------------------------
-      IF(ASSOCIATED( Inst%ERD_FCT_GEO  )) DEALLOCATE(Inst%ERD_FCT_GEO  )
-      IF(ASSOCIATED( Inst%SRCE_FUNC    )) DEALLOCATE(Inst%SRCE_FUNC    )
-      IF(ASSOCIATED( Inst%LND_FRC_DRY  )) DEALLOCATE(Inst%LND_FRC_DRY  )
-      IF(ASSOCIATED( Inst%MSS_FRC_CACO3)) DEALLOCATE(Inst%MSS_FRC_CACO3)
-      IF(ASSOCIATED( Inst%MSS_FRC_SND  )) DEALLOCATE(Inst%MSS_FRC_SND  )
-      IF(ASSOCIATED( Inst%SFC_TYP      )) DEALLOCATE(Inst%SFC_TYP      )
-      IF(ASSOCIATED( Inst%VAI_DST      )) DEALLOCATE(Inst%VAI_DST      )
+         !--------------------------------------------------------------
+         ! Deallocate fields of Inst before popping off from the list
+         ! in order to avoid memory leaks (Bob Yantosca (17 Aug 2022)
+         !--------------------------------------------------------------
+         IF ( ASSOCIATED( Inst%ERD_FCT_GEO ) ) THEN
+            DEALLOCATE(Inst%ERD_FCT_GEO  )
+         ENDIF
+         Inst%ERD_FCT_GEO => NULL()
 
-      !-----------------------------------------------------------------
-      ! Cleanup module arrays
-      !-----------------------------------------------------------------
+         IF ( ASSOCIATED( Inst%SRCE_FUNC ) ) THEN
+            DEALLOCATE(Inst%SRCE_FUNC )
+         ENDIF
+         Inst%SRCE_FUNC => NULL()
 
-!      IF ( ALLOCATED( Inst%FLX_LW_DWN_SFC  ) )
-!     &    DEALLOCATE( Inst%FLX_LW_DWN_SFC  )
-!      IF ( ALLOCATED( Inst%FLX_SW_ABS_SFC  ) )
-!     &    DEALLOCATE( Inst%FLX_SW_ABS_SFC  )
-!      IF ( ALLOCATED( Inst%TPT_GND         ) )
-!     &    DEALLOCATE( Inst%TPT_GND         )
-!      IF ( ALLOCATED( Inst%TPT_SOI         ) )
-!     &    DEALLOCATE( Inst%TPT_SOI         )
-!      IF ( ALLOCATED( Inst%VWC_SFC         ) )
-!     &    DEALLOCATE( Inst%VWC_SFC         )
-!      IF ( ALLOCATED( Inst%SRC_STR         ) )
-!     &    DEALLOCATE( Inst%SRC_STR         )
-      IF ( ALLOCATED( Inst%PLN_TYP         ) )
-     &    DEALLOCATE( Inst%PLN_TYP         )
-      IF ( ALLOCATED( Inst%PLN_FRC         ) )
-     &    DEALLOCATE( Inst%PLN_FRC         )
-      IF ( ALLOCATED( Inst%TAI             ) )
-     &    DEALLOCATE( Inst%TAI             )
-      IF ( ALLOCATED( Inst%DMT_VWR         ) )
-     &    DEALLOCATE( Inst%DMT_VWR         )
-!      IF ( ALLOCATED( Inst%DNS_AER         ) )
-!     &    DEALLOCATE( Inst%DNS_AER         )
-      IF ( ALLOCATED( Inst%OVR_SRC_SNK_FRC ) )
-     &    DEALLOCATE( Inst%OVR_SRC_SNK_FRC )
-      IF ( ALLOCATED( Inst%OVR_SRC_SNK_MSS ) )
-     &    DEALLOCATE( Inst%OVR_SRC_SNK_MSS )
-!      IF ( ALLOCATED( Inst%OROGRAPHY       ) )
-!     &    DEALLOCATE( Inst%OROGRAPHY       )
-      IF ( ALLOCATED( Inst%DMT_MIN         ) )
-     &    DEALLOCATE( Inst%DMT_MIN         )
-      IF ( ALLOCATED( Inst%DMT_MAX         ) )
-     &    DEALLOCATE( Inst%DMT_MAX         )
-      IF ( ALLOCATED( Inst%DMT_VMA_SRC     ) )
-     &    DEALLOCATE( Inst%DMT_VMA_SRC     )
-      IF ( ALLOCATED( Inst%GSD_ANL_SRC     ) )
-     &    DEALLOCATE( Inst%GSD_ANL_SRC     )
-      IF ( ALLOCATED( Inst%MSS_FRC_SRC     ) )
-     &    DEALLOCATE( Inst%MSS_FRC_SRC     )
-      IF ( ALLOCATED( Inst%HcoIDs          ) )
-     &    DEALLOCATE( Inst%HcoIDs          )
-      IF ( ALLOCATED( Inst%HcoIDsALK       ) )
-     &    DEALLOCATE( Inst%HcoIDsALK       )
+         IF ( ASSOCIATED( Inst%LND_FRC_DRY ) ) THEN
+            DEALLOCATE(Inst%LND_FRC_DRY )
+         ENDIF
+         Inst%LND_FRC_DRY   => NULL()
 
-       ! Pop off instance from list
-       IF ( ASSOCIATED(PrevInst) ) THEN
-          PrevInst%NextInst => Inst%NextInst
-       ELSE
-          AllInst => Inst%NextInst
-       ENDIF
-       DEALLOCATE(Inst)
-       Inst => NULL()
+         IF ( ASSOCIATED( Inst%MSS_FRC_CACO3 ) ) THEN
+            DEALLOCATE(Inst%MSS_FRC_CACO3)
+         ENDIF
+         Inst%MSS_FRC_CACO3 => NULL()
+
+         IF ( ASSOCIATED( Inst%MSS_FRC_SND ) ) THEN
+            DEALLOCATE(Inst%MSS_FRC_SND )
+         ENDIF
+         Inst%MSS_FRC_SND => NULL()
+
+         IF ( ASSOCIATED( Inst%SFC_TYP ) ) THEN
+            DEALLOCATE(Inst%SFC_TYP )
+         ENDIF
+         Inst%SFC_TYP => NULL()
+
+         IF ( ASSOCIATED( Inst%VAI_DST ) ) THEN
+            DEALLOCATE(Inst%VAI_DST )
+         ENDIF
+         Inst%VAI_DST => NULL()
+
+         IF ( ALLOCATED( Inst%PLN_TYP ) ) THEN
+            DEALLOCATE( Inst%PLN_TYP )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%PLN_FRC ) ) THEN
+            DEALLOCATE( Inst%PLN_FRC )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%TAI ) ) THEN
+            DEALLOCATE( Inst%TAI )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%DMT_VWR ) ) THEN
+            DEALLOCATE( Inst%DMT_VWR )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%OVR_SRC_SNK_FRC ) ) THEN
+            DEALLOCATE( Inst%OVR_SRC_SNK_FRC )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%OVR_SRC_SNK_MSS ) ) THEN
+            DEALLOCATE( Inst%OVR_SRC_SNK_MSS )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%DMT_MIN ) ) THEN
+            DEALLOCATE( Inst%DMT_MIN )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%DMT_MAX ) ) THEN
+            DEALLOCATE( Inst%DMT_MAX )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%DMT_VMA_SRC ) ) THEN
+            DEALLOCATE( Inst%DMT_VMA_SRC )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%GSD_ANL_SRC ) ) THEN
+            DEALLOCATE( Inst%GSD_ANL_SRC )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%MSS_FRC_SRC ) ) THEN
+            DEALLOCATE( Inst%MSS_FRC_SRC )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%HcoIDs ) ) THEN
+            DEALLOCATE( Inst%HcoIDs )
+         ENDIF
+
+         IF ( ALLOCATED( Inst%HcoIDsALK ) ) THEN
+            DEALLOCATE( Inst%HcoIDsALK )
+         ENDIF
+
+         !--------------------------------------------------------------
+         ! Pop off instance from list
+         !--------------------------------------------------------------
+         IF ( ASSOCIATED(PrevInst) ) THEN
+            PrevInst%NextInst => Inst%NextInst
+         ELSE
+            AllInst => Inst%NextInst
+         ENDIF
+         DEALLOCATE(Inst)
+
       ENDIF
+
+      ! Free pointers before exiting
+      PrevInst => NULL()
+      Inst     => NULL()
 
       END SUBROUTINE InstRemove
 !EOC

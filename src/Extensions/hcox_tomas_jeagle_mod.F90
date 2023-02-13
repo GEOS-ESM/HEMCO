@@ -186,9 +186,12 @@ CONTAINS
        ! Grid box surface area [m2]
        A_M2  = HcoState%Grid%AREA_M2%Val(I,J)
 
-       ! Get the fraction of the box that is over water
-       IF ( HCO_LandType( ExtState%WLI%Arr%Val(I,J),              &
-                          ExtState%FRLANDIC%Arr%Val(I,J) ) == 0 ) THEN
+       ! Get the fraction of the box over ocean
+       IF ( HCO_LandType( ExtState%FRLAND%Arr%Val(I,J),   &
+                          ExtState%FRLANDIC%Arr%Val(I,J), &
+                          ExtState%FROCEAN%Arr%Val(I,J),  &
+                          ExtState%FRSEAICE%Arr%Val(I,J), &
+                          ExtState%FRLAKE%Arr%Val(I,J) ) == 0 ) THEN
           FOCEAN = 1d0 - ExtState%FRCLND%Arr%Val(I,J)
        ELSE
           FOCEAN = 0.d0
@@ -558,8 +561,11 @@ CONTAINS
     !=======================================================================
 
     ! Activate met fields
-    ExtState%WLI%DoUse         = .TRUE.
+    ExtState%FRLAND%DoUse      = .TRUE.
     ExtState%FRLANDIC%DoUse    = .TRUE.
+    ExtState%FROCEAN%DoUse     = .TRUE.
+    ExtState%FRSEAICE%DoUse    = .TRUE.
+    ExtState%FRLAKE%DoUse      = .TRUE.
     ExtState%TSKIN%DoUse       = .TRUE.
     ExtState%U10M%DoUse        = .TRUE.
     ExtState%V10M%DoUse        = .TRUE.
@@ -782,22 +788,48 @@ CONTAINS
     ! Instance-specific deallocation
     IF ( ASSOCIATED(Inst) ) THEN
 
+       !---------------------------------------------------------------------
+       ! Deallocate fields of Inst before popping off from the list
+       ! in order to avoid memory leaks (Bob Yantosca (17 Aug 2022)
+       !---------------------------------------------------------------------
+       IF ( ASSOCIATED( Inst%TOMAS_DBIN ) ) THEN
+          DEALLOCATE( Inst%TOMAS_DBIN )
+       ENDIF
+       Inst%TOMAS_DBIN => NULL()
+
+       IF ( ASSOCIATED( Inst%DRFAC ) ) THEN
+          DEALLOCATE( Inst%DRFAC )
+       ENDIF
+       Inst%DRFAC => NULL()
+
+       IF ( ASSOCIATED( Inst%TC1 ) ) THEN
+          DEALLOCATE( Inst%TC1 )
+       ENDIF
+       Inst%TC1 => NULL()
+
+       IF ( ASSOCIATED( Inst%TC2 ) ) THEN
+          DEALLOCATE( Inst%TC2 )
+       ENDIF
+       Inst%TC2 => NULL()
+
+       IF ( ALLOCATED ( Inst%HcoIDs ) ) THEN
+          DEALLOCATE( Inst%HcoIDs )
+       ENDIF
+
+       !---------------------------------------------------------------------
        ! Pop off instance from list
+       !---------------------------------------------------------------------
        IF ( ASSOCIATED(PrevInst) ) THEN
-
-          IF ( ASSOCIATED( Inst%TOMAS_DBIN ) ) DEALLOCATE( Inst%TOMAS_DBIN )
-          IF ( ASSOCIATED( Inst%DRFAC      ) ) DEALLOCATE( Inst%DRFAC      )
-          IF ( ASSOCIATED( Inst%TC1        ) ) DEALLOCATE( Inst%TC1        )
-          IF ( ASSOCIATED( Inst%TC2        ) ) DEALLOCATE( Inst%TC2        )
-          IF ( ALLOCATED ( Inst%HcoIDs     ) ) DEALLOCATE( Inst%HcoIDs     )
-
           PrevInst%NextInst => Inst%NextInst
        ELSE
           AllInst => Inst%NextInst
        ENDIF
        DEALLOCATE(Inst)
-       Inst => NULL()
     ENDIF
+
+    ! Free pointers before exiting
+    PrevInst => NULL()
+    Inst     => NULL()
 
    END SUBROUTINE InstRemove
 !EOC

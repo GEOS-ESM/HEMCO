@@ -5,8 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-  - nothing yet
+## [3.6.0] - 2023-02-01
+### Added
+  - Added MAPL_ESMF compiler option for use with GCHP and GEOS
+  - New "Parallelize GEOS-Chem and HEMCO source code" guide on ReadTheDocs
+  - Updated documentation describing a masking error that can happen when performing simulations with cropped horizontal grids
+
+### Changed
+  - Set HCO_MISSVAL to MAPL missing value (1e15) if using GCHP or GEOS
+  - Use fraction surface type inputs instead of ExtState%WLI
+  - The version number in docs/source/conf.py is now 3.6.0
+  - Updated compilation output splash screen in compiling.rst ReadTheDocs file
+
+### Fixed
+  - Bug fix for inserting hard breaks in hemco-config.rst ReadTheDocs file
+
+### Removed
+  - Removed old kludge for MAPL missing data if applying mask
+  - Removed ExtState field for water-land-ice index (WLI)
+
+## [3.5.2] - 2022-11-29
+### Added
+  - Added sanitizer option for detecting memory leaks in HEMCO
+    standalone during build
+
+### Changed
+  - Remove unused, commented-out code in `src/Extensions/hcox_dustdead_mod.F`
+  - Replaced placeholder error messages in
+    `src/Core/hco_config_mod.F90` with more informational messages
+    (often including the line of the HEMCO_Config.rc in the printout)
+  - Added improved documentation for time cycle flag `EFYO` in ReadTheDocs
+
+### Fixed
+  - Removed memory leaks that were identified by the code sanitizer
+
+## [3.5.1] - 2022-11-03
+### Fixed
+  - Changed Inst%NP to Inst%NumP in HCOX_Seasalt_Mod for CESM compatibility
 
 ## [3.5.0] - 2022-09-19
 ### Added
@@ -339,7 +374,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
   - Various updates to PARANOX:
     - Bug fix in calculation of H2O ambient air concentration'
-	- Bug fix in computation of solar zenith angle for the current date
+ - Bug fix in computation of solar zenith angle for the current date
       calculation of the current date SZA;
     - Loss fluxes of O3 and HNO3 are now passed in kg/m2/s via the
         HEMCO diagnostics instead of converting them to a deposition
@@ -352,12 +387,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Various updates to the HEMCO standalone code
   - Modifications to on/off switches in `HEMCO_Config.rc`:
     - Extension names can be used as switches
-	- Multiple switches can be combined with `.or`
+ - Multiple switches can be combined with `.or`
 
 ### Changed
   - HEMCO has now two run phases:
-      - Phase 1 reads the HEMCO list
-	  - Phase 2 calculates emissions.
+  - Phase 1 reads the HEMCO list
+  - Phase 2 calculates emissions.
   - Environmental fields used by HEMCO (stored in the `ExtState`
     object) can now be read directly from disk.
   - Various updates to the HEMCO standalone code
@@ -371,11 +406,11 @@ Initial HEMCO release
   - Bug fixes for the BIOGENIC_OCPI diagnostic
   - Bug fixes in the computation of alkalinity
   - PARANOx updates:
-    - Can now read the lookup table from netCDF or ASCII format
-	- Wind speed is now accounted for in the parameterization
-	- Dry deposition of N is included va loss of HNO3.
-	- Total tropospheric column mass is used to calculate dry
-      deposition frequencies.
+  - Can now read the lookup table from netCDF or ASCII format
+  - Wind speed is now accounted for in the parameterization
+  - Dry deposition of N is included va loss of HNO3.
+  - Total tropospheric column mass is used to calculate dry
+    deposition frequencies.
   - Local times can now be calculated based on a time zone map (at 1x1
     degree resolution).
   - Non-emissions data may now be specified in `HEMCO_Config.rc` by

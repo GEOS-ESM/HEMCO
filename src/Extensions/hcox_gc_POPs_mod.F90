@@ -1519,6 +1519,10 @@ CONTAINS
 !
       FUNCTION IS_LAND( I, J, ExtState ) RESULT ( LAND )
 !
+! !USES:
+!
+    USE HCO_GeoTools_Mod, ONLY : HCO_LANDTYPE
+!
 ! !INPUT PARAMETERS:
 !
       INTEGER,         INTENT(IN) :: I           ! Longitude index of grid box
@@ -1535,10 +1539,11 @@ CONTAINS
 !EOP
 !------------------------------------------------------------------------------
 !BOC
-
-      ! LWI=1 and FRLANDIC less than 50% is a LAND box
-      LAND = ( NINT( ExtState%WLI%Arr%Val(I,J) ) == 1   .and. &
-                     ExtState%FRLANDIC%Arr%Val(I,J)  <  0.5e+0_hp )
+      LAND = HCO_LANDTYPE( ExtState%FRLAND%Arr%Val(I,J),   &
+                           ExtState%FRLANDIC%Arr%Val(I,J), &
+                           ExtState%FROCEAN%Arr%Val(I,J),  &
+                           ExtState%FRSEAICE%Arr%Val(I,J), &
+                           ExtState%FRLAKE%Arr%Val(I,J) ) == 1
 
       END FUNCTION IS_LAND
 !EOC
@@ -1557,6 +1562,10 @@ CONTAINS
 !
       FUNCTION IS_ICE( I, J, ExtState ) RESULT ( ICE )
 !
+! !USES:
+!
+    USE HCO_GeoTools_Mod, ONLY : HCO_LANDTYPE
+!
 ! !INPUT PARAMETERS:
 !
       INTEGER,         INTENT(IN) :: I           ! Longitude index of grid box
@@ -1574,9 +1583,11 @@ CONTAINS
 !------------------------------------------------------------------------------
 !BOC
 
-      ! LWI=2 or FRLANDIC > 50%
-      ICE = ( NINT( ExtState%WLI%Arr%Val(I,J) ) == 2       .or. &
-                    ExtState%FRLANDIC%Arr%Val(I,J)  >= 0.5+0_hp )
+      ICE = HCO_LANDTYPE( ExtState%FRLAND%Arr%Val(I,J),   &
+                          ExtState%FRLANDIC%Arr%Val(I,J), &
+                          ExtState%FROCEAN%Arr%Val(I,J),  &
+                          ExtState%FRSEAICE%Arr%Val(I,J), &
+                          ExtState%FRLAKE%Arr%Val(I,J) ) == 2
 
       END FUNCTION IS_ICE
 !EOC
@@ -1720,11 +1731,9 @@ CONTAINS
 
     ! Activate met fields required by this extension
     ExtState%POPG%DoUse        = .TRUE.
-    ExtState%FRLANDIC%DoUse    = .TRUE.
     ExtState%AIRVOL%DoUse      = .TRUE.
     ExtState%AIRDEN%DoUse      = .TRUE.
     ExtState%FRAC_OF_PBL%DoUse = .TRUE.
-    ExtState%FRLAKE%DoUse      = .TRUE.
     ExtState%LAI%DoUse         = .TRUE.
     ExtState%PSC2_WET%DoUse    = .TRUE.
     ExtState%SNOWHGT%DoUse     = .TRUE.
@@ -1732,7 +1741,11 @@ CONTAINS
     ExtState%TSKIN%DoUse       = .TRUE.
     ExtState%U10M%DoUse        = .TRUE.
     ExtState%V10M%DoUse        = .TRUE.
-    ExtState%WLI%DoUse         = .TRUE.
+    ExtState%FRLAND%DoUse      = .TRUE.
+    ExtState%FRLANDIC%DoUse    = .TRUE.
+    ExtState%FROCEAN%DoUse     = .TRUE.
+    ExtState%FRSEAICE%DoUse    = .TRUE.
+    ExtState%FRLAKE%DoUse      = .TRUE.
 
     !=======================================================================
     ! Initialize data arrays
@@ -2155,51 +2168,109 @@ CONTAINS
     ! Instance-specific deallocation
     IF ( ASSOCIATED(Inst) ) THEN
 
+       !---------------------------------------------------------------------
+       ! Deallocate fields of Inst before popping off from the list
+       ! in order to avoid memory leaks (Bob Yantosca (17 Aug 2022)
+       !---------------------------------------------------------------------
+       IF ( ASSOCIATED( Inst%EmisPOPPOCPO ) ) THEN
+          DEALLOCATE( Inst%EmisPOPPOCPO )
+       ENDIF
+       Inst%EmisPOPPOCPO => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPPBCPO ) ) THEN
+          DEALLOCATE( Inst%EmisPOPPBCPO )
+       ENDIF
+       Inst%EmisPOPPBCPO => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPG ) ) THEN
+          DEALLOCATE( Inst%EmisPOPG )
+       ENDIF
+       Inst%EmisPOPG => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPGfromSoil ) ) THEN
+          DEALLOCATE( Inst%EmisPOPGfromSoil )
+       ENDIF
+       Inst%EmisPOPGfromSoil => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPGfromLake ) ) THEN
+          DEALLOCATE( Inst%EmisPOPGfromLake )
+       ENDIF
+       Inst%EmisPOPGfromLake => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPGfromLeaf ) ) THEN
+          DEALLOCATE( Inst%EmisPOPGfromLeaf )
+       ENDIF
+       Inst%EmisPOPGfromLeaf => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPGfromSnow  ) ) THEN
+          DEALLOCATE( Inst%EmisPOPGfromSnow  )
+       ENDIF
+       Inst%EmisPOPGfromSnow => NULL()
+
+       IF ( ASSOCIATED( Inst%EmisPOPGfromOcean ) ) THEN
+          DEALLOCATE( Inst%EmisPOPGfromOcean    )
+       ENDIF
+       Inst%EmisPOPGfromOcean => NULL()
+
+       IF ( ASSOCIATED( Inst%FluxPOPGfromSoilToAir ) ) THEN
+          DEALLOCATE( Inst%FluxPOPGfromSoilToAir )
+       ENDIF
+       Inst%FluxPOPGfromSoilToAir => NULL()
+
+       IF ( ASSOCIATED( Inst%FluxPOPGfromAirToSoil ) ) THEN
+          DEALLOCATE( Inst%FluxPOPGfromAirToSoil )
+       ENDIF
+       Inst%FluxPOPGfromAirToSoil => NULL()
+
+       IF ( ASSOCIATED( Inst%FluxPOPGfromLakeToAir ) ) THEN
+          DEALLOCATE( Inst%FluxPOPGfromLakeToAir )
+       ENDIF
+       Inst%FluxPOPGfromLakeToAir => NULL()
+
+       IF ( ASSOCIATED( Inst%FluxPOPGfromAirToLake ) ) THEN
+          DEALLOCATE( Inst%FluxPOPGfromAirToLake )
+       ENDIF
+       Inst%FluxPOPGfromAirToLake => NULL()
+
+       IF ( ASSOCIATED( Inst%FluxPOPGfromLeafToAir ) ) THEN
+          DEALLOCATE( Inst%FluxPOPGfromLeafToAir )
+       ENDIF
+       Inst%FluxPOPGfromLeafToAir => NULL()
+
+       IF ( ASSOCIATED( Inst%FluxPOPGfromAirtoLeaf ) ) THEN
+          DEALLOCATE( Inst%FluxPOPGfromAirtoLeaf )
+       ENDIF
+       Inst%FluxPOPGfromAirtoLeaf => NULL() 
+
+       IF ( ASSOCIATED( Inst%FugacitySoilToAir ) ) THEN
+          DEALLOCATE( Inst%FugacitySoilToAir )
+       ENDIF
+       Inst%FugacitySoilToAir => NULL()
+
+       IF ( ASSOCIATED( Inst%FugacityLakeToAir ) ) THEN
+          DEALLOCATE( Inst%FugacityLakeToAir )
+       ENDIF
+       Inst%FugacityLakeToAir => NULL()
+
+       IF ( ASSOCIATED( Inst%FugacityLeafToAir ) ) THEN
+          DEALLOCATE( Inst%FugacityLeafToAir )
+       ENDIF
+       Inst%FugacityLeafToAir => NULL()
+       
+       !---------------------------------------------------------------------
        ! Pop off instance from list
+       !---------------------------------------------------------------------
        IF ( ASSOCIATED(PrevInst) ) THEN
-
-          IF ( ASSOCIATED(Inst%EmisPOPPOCPO         ) ) &
-               DEALLOCATE(Inst%EmisPOPPOCPO         )
-          IF ( ASSOCIATED(Inst%EmisPOPPBCPO         ) ) &
-               DEALLOCATE(Inst%EmisPOPPBCPO         )
-          IF ( ASSOCIATED(Inst%EmisPOPG             ) ) &
-               DEALLOCATE(Inst%EmisPOPG             )
-          IF ( ASSOCIATED(Inst%EmisPOPGfromSoil     ) ) &
-               DEALLOCATE(Inst%EmisPOPGfromSoil     )
-          IF ( ASSOCIATED(Inst%EmisPOPGfromLake     ) ) &
-               DEALLOCATE(Inst%EmisPOPGfromLake     )
-          IF ( ASSOCIATED(Inst%EmisPOPGfromLeaf     ) ) &
-               DEALLOCATE(Inst%EmisPOPGfromLeaf     )
-          IF ( ASSOCIATED(Inst%EmisPOPGfromSnow     ) ) &
-               DEALLOCATE(Inst%EmisPOPGfromSnow     )
-          IF ( ASSOCIATED(Inst%EmisPOPGfromOcean    ) ) &
-               DEALLOCATE(Inst%EmisPOPGfromOcean    )
-          IF ( ASSOCIATED(Inst%FluxPOPGfromSoilToAir) ) &
-               DEALLOCATE(Inst%FluxPOPGfromSoilToAir)
-          IF ( ASSOCIATED(Inst%FluxPOPGfromAirToSoil) ) &
-               DEALLOCATE(Inst%FluxPOPGfromAirToSoil)
-          IF ( ASSOCIATED(Inst%FluxPOPGfromLakeToAir) ) &
-               DEALLOCATE(Inst%FluxPOPGfromLakeToAir)
-          IF ( ASSOCIATED(Inst%FluxPOPGfromAirToLake) ) &
-               DEALLOCATE(Inst%FluxPOPGfromAirToLake)
-          IF ( ASSOCIATED(Inst%FluxPOPGfromLeafToAir) ) &
-               DEALLOCATE(Inst%FluxPOPGfromLeafToAir)
-          IF ( ASSOCIATED(Inst%FluxPOPGfromAirtoLeaf) ) &
-               DEALLOCATE(Inst%FluxPOPGfromAirtoLeaf)
-          IF ( ASSOCIATED(Inst%FugacitySoilToAir    ) ) &
-               DEALLOCATE(Inst%FugacitySoilToAir    )
-          IF ( ASSOCIATED(Inst%FugacityLakeToAir    ) ) &
-               DEALLOCATE(Inst%FugacityLakeToAir    )
-          IF ( ASSOCIATED(Inst%FugacityLeafToAir    ) ) &
-               DEALLOCATE(Inst%FugacityLeafToAir    )
-
           PrevInst%NextInst => Inst%NextInst
        ELSE
           AllInst => Inst%NextInst
        ENDIF
        DEALLOCATE(Inst)
-       Inst => NULL()
     ENDIF
+
+    ! Free pointers before exiting
+    PrevInst => NULL()
+    Inst     => NULL()
 
    END SUBROUTINE InstRemove
 !EOC

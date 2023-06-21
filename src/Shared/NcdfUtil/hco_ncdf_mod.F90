@@ -26,6 +26,7 @@ MODULE HCO_NCDF_MOD
   USE HCO_m_netcdf_io_define
   USE HCO_m_netcdf_io_write
   USE HCO_m_netcdf_io_checks
+  USE HCO_PRECISION_MOD, ONLY : SP => f4, DP => f8
 
   IMPLICIT NONE
   PRIVATE
@@ -412,9 +413,34 @@ CONTAINS
 
     ! Read calendar attribute
     IF ( PRESENT( timeCalendar ) ) THEN
-       CALL NcGet_Var_Attributes( fId, v_name, 'calendar', timeCalendar )
-    ENDIF
 
+       ! We now get the status variable RC.  This will allow program
+       ! flow to continue if the "time:calendar" attribute is not found.
+       CALL NcGet_Var_Attributes( fId, v_name, 'calendar', timeCalendar, RC )
+
+       ! If "time:calendar" is found, then throw an error for
+       ! climatological calendars without leap years.
+       IF ( RC == 0 ) THEN
+        SELECT CASE( TRIM( v_name ) )
+          CASE( '360_day', '365_day', '366_day', 'all_leap',                 &
+                'allleap', 'no_leap', 'noleap'                              )
+             WRITE( 6, '(/,a)' ) REPEAT( '=', 79 )
+             WRITE( 6, '(a  )' ) 'HEMCO does not support calendar type '  // &
+                                 TRIM( v_name )
+             WRITE( 6, '(/,a)' )  'HEMCO supports the following calendars:'
+             WRITE( 6, '(a)'   )  ' - standard (i.e. mixed gregorian/julian)'
+             WRITE( 6, '(a)'   )  ' - gregorian'
+             WRITE( 6, '(a,/)' ) REPEAT( '=', 79 )
+             RC = -1
+          CASE DEFAULT
+             ! Do nothing
+        END SELECT
+       ENDIF
+       
+       ! Reset RC so that we won't halt execution elsewhere
+       RC = 0
+    ENDIF
+    
   END SUBROUTINE NC_READ_TIME
 !EOC
 !------------------------------------------------------------------------------
@@ -1285,7 +1311,7 @@ CONTAINS
 ! !LOCAL VARIABLES:
 !
     ! Scalars
-    CHARACTER(LEN=255)  :: ncUnit
+    CHARACTER(LEN=255)  :: ncUnit, cal
     INTEGER             :: refYr, refMt, refDy, refHr, refMn, refSc
     INTEGER             :: T, YYYYMMDD, hhmmss
     REAL*8              :: realrefDy, refJulday, tJulday
@@ -1304,8 +1330,14 @@ CONTAINS
     IF ( PRESENT(refYear ) ) refYear  = 0
 
     ! Read time vector
-    CALL NC_READ_TIME ( fID, nTime, ncUnit, timeVec=tVec, RC=RC )
-    IF ( RC/=0 ) RETURN
+    CALL NC_READ_TIME ( fID,          nTime,            ncUnit,              &
+                        timeVec=tVec, timeCalendar=cal, RC=RC               )
+    IF ( RC/=0 ) THEN
+       WRITE( 6, '(/,a)' ) REPEAT( '=', 79 )
+       WRITE( 6, '(a)'   ) 'Error encountered in NC_READ_TIME (ncdf_mod.F90)'
+       WRITE( 6, '(a,/)' ) REPEAT( '=', 79 )
+       RETURN
+    ENDIF
 
     ! If nTime is zero, return here!
     IF ( nTime == 0 ) RETURN
@@ -1965,8 +1997,8 @@ CONTAINS
 !
     INTEGER,          INTENT(IN   ) :: fID             ! Ncdf File ID
     INTEGER,          INTENT(IN   ) :: AXIS            ! 1=lon, 2=lat
-    REAL*4,           INTENT(IN   ) :: MID(NMID)       ! midpoints
     INTEGER,          INTENT(IN   ) :: NMID            ! # of midpoints
+    REAL*4,           INTENT(IN   ) :: MID(NMID)       ! midpoints
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
@@ -2016,8 +2048,8 @@ CONTAINS
 !
     INTEGER,          INTENT(IN   ) :: fID             ! Ncdf File ID
     INTEGER,          INTENT(IN   ) :: AXIS            ! 1=lon, 2=lat
-    REAL*8,           INTENT(IN   ) :: MID(NMID)       ! midpoints
     INTEGER,          INTENT(IN   ) :: NMID            ! # of midpoints
+    REAL*8,           INTENT(IN   ) :: MID(NMID)       ! midpoints
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
@@ -2064,9 +2096,9 @@ CONTAINS
 !
     INTEGER,          INTENT(IN   ) :: fID             ! Ncdf File ID
     INTEGER,          INTENT(IN   ) :: AXIS            ! 1=lon, 2=lat
+    INTEGER,          INTENT(IN   ) :: NMID            ! # of midpoints
     REAL*4, OPTIONAL, INTENT(IN   ) :: MID4(NMID)       ! midpoints
     REAL*8, OPTIONAL, INTENT(IN   ) :: MID8(NMID)       ! midpoints
-    INTEGER,          INTENT(IN   ) :: NMID            ! # of midpoints
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
@@ -4007,7 +4039,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN)  :: fId           ! file ID
     CHARACTER(LEN=*), INTENT(IN)  :: VarName       ! variable name
-    REAL(kind=8)                  :: Var           ! Variable to be written
+    REAL(kind=dp)                 :: Var           ! Variable to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4054,7 +4086,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN)  :: fId           ! file ID
     CHARACTER(LEN=*), INTENT(IN)  :: VarName       ! variable name
-    REAL(kind=8),     POINTER     :: Arr1D(:)      ! array to be written
+    REAL(kind=dp),    POINTER     :: Arr1D(:)      ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4108,7 +4140,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN) :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN) :: VarName        ! variable name
-    REAL(kind=8),     POINTER    :: Arr2D(:,:)     ! array to be written
+    REAL(kind=dp),    POINTER    :: Arr2D(:,:)     ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4168,7 +4200,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN) :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN) :: VarName        ! variable name
-    REAL(kind=8),     POINTER    :: Arr3D(:,:,:)   ! array to be written
+    REAL(kind=dp),    POINTER    :: Arr3D(:,:,:)   ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4228,7 +4260,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN) :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN) :: VarName        ! variable name
-    REAL(kind=8),     POINTER    :: Arr4D(:,:,:,:) ! array to be written
+    REAL(kind=dp),    POINTER    :: Arr4D(:,:,:,:) ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4288,7 +4320,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN)  :: fId           ! file ID
     CHARACTER(LEN=*), INTENT(IN)  :: VarName       ! variable name
-    REAL(kind=4)                  :: Var           ! Variable to be written
+    REAL(kind=sp)                 :: Var           ! Variable to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4335,7 +4367,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN) :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN) :: VarName        ! variable name
-    REAL(kind=4),     POINTER    :: Arr1D(:)       ! array to be written
+    REAL(kind=sp),    POINTER    :: Arr1D(:)       ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4389,7 +4421,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN) :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN) :: VarName        ! variable name
-    REAL(kind=4),     POINTER    :: Arr2D(:,:)     ! array to be written
+    REAL(kind=sp),    POINTER    :: Arr2D(:,:)     ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4449,7 +4481,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN)  :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN)  :: VarName        ! variable name
-    REAL(kind=4),     POINTER     :: Arr3D(:,:,:)   ! array to be written
+    REAL(kind=sp),    POINTER     :: Arr3D(:,:,:)   ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:
@@ -4509,7 +4541,7 @@ CONTAINS
 !
     INTEGER,          INTENT(IN) :: fId            ! file ID
     CHARACTER(LEN=*), INTENT(IN) :: VarName        ! variable name
-    REAL(kind=4),     POINTER    :: Arr4D(:,:,:,:) ! array to be written
+    REAL(kind=sp),    POINTER    :: Arr4D(:,:,:,:) ! array to be written
 !
 ! !REMARKS:
 !  Assumes that you have:

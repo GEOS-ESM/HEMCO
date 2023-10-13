@@ -1,3 +1,6 @@
+!------------------------------------------------------------------------------
+!                   Harmonized Emissions Component (HEMCO)                    !
+!------------------------------------------------------------------------------
 !BOP
 !
 ! !MODULE: hco_config_mod.F90
@@ -555,8 +558,8 @@ CONTAINS
     HcoState%SetReadListCalled = .TRUE.
 
     ! Debug
-    IF ( HCO_IsVerb( HcoState%Config%Err, 1 ) ) THEN
-       CALL ReadList_Print( HcoState, HcoState%ReadLists, 1 )
+    IF ( HCO_IsVerb( HcoState%Config%Err ) ) THEN
+       CALL ReadList_Print( HcoState, HcoState%ReadLists )
     ENDIF
 
     ! Leave w/ success
@@ -862,8 +865,8 @@ CONTAINS
              ! Fill data container
              ! -------------------------------------------------------------
 
-             ! Add blank list container to ConfigList list. The container
-             ! is placed at the beginning of the list.
+             ! Add blank list container (ListCont object) to ConfigList.
+             ! The container is placed at the beginning of the list.
              CALL ConfigList_AddCont ( Lct, HcoConfig%ConfigList )
 
              ! Check if name exists already
@@ -876,14 +879,14 @@ CONTAINS
 
              ! Attributes used by all data types: data type number and
              ! container name.
-             Lct%Dct%DctType      = DctType
-             Lct%Dct%cName        = ADJUSTL(tagcName)
+             Lct%Dct%DctType = DctType
+             Lct%Dct%cName   = ADJUSTL( tagcName )
 
              ! Set species name, extension number, emission category,
              ! hierarchy
-             Lct%Dct%SpcName       = ADJUSTL(SpcName)
-             Lct%Dct%Hier          = Int2
-             Lct%Dct%ExtNr         = Int3
+             Lct%Dct%SpcName = ADJUSTL( SpcName )
+             Lct%Dct%Hier    = Int2
+             Lct%Dct%ExtNr   = Int3
 
              ! Extract category from character 2. This can be up to
              ! CatMax integers, or empty.
@@ -939,32 +942,46 @@ CONTAINS
              ! default value of -999 to be able to identify data objects
              ! used by multiple containers.
              ! -------------------------------------------------------------
-             IF ( TRIM(srcFile) == '-' ) THEN
-                IF ( .NOT. ASSOCIATED(Dta) ) THEN
+             IF ( TRIM( srcFile ) == '-' ) THEN
+
+                ! The current entry of the configuration file specifies that
+                ! we will get data from the file listed immediately above it.
+                ! Thus we have to reuse a previously-defined FileData object
+                ! (aka Dta).  Stop if Dta is not initialized.
+                IF ( .not. ASSOCIATED( Dta ) ) THEN
                    MSG = 'Cannot use previous data container: '//TRIM(tagcName)
                    CALL HCO_Error( msg, RC, thisLoc=loc )
                    RETURN
                 ENDIF
+
+                ! Reuse the file metadata specified in PrevDta for
+                ! this entry of the HEMCO configuration file.
                 Lct%Dct%DtaHome = Lct%Dct%DtaHome - 1
+
              ELSE
-                ! NOTE: FileData_Init now nullifies the Dta object
-                ! befire allocation.  -- Bob Yantosca (22 Aug 2022)
+
+                ! The current entry of the configuration file specifies that
+                ! we will read data from a file.  We thus need to initialize
+                ! a new FileData object to keep track of the file metadata.
+                !
+                ! >>> NOTE: This seems to cause a memory leak! <<<
+                ! >>> We will look into this at a later date.  <<<
                 CALL FileData_Init( Dta )
 
                 ! Set source file name. Check if the read file name starts
                 ! with the configuration file token '$CFDIR', in which case
                 ! we replace this value with the passed CFDIR value.
-                STRLEN = LEN(srcFile)
+                STRLEN = LEN( srcFile )
                 IF ( STRLEN > 6 ) THEN
                    IF ( srcFile(1:6) == '$CFDIR' ) THEN
-                      srcFile = TRIM(CFDIR) // TRIM(srcFile(7:STRLEN))
+                      srcFile = TRIM( CFDIR ) // TRIM( srcFile(7:STRLEN) )
                    ENDIF
                 ENDIF
-                Dta%ncFile    = srcFile
+                Dta%ncFile   = srcFile
 
                 ! Set source variable and original data unit.
-                Dta%ncPara    = ADJUSTL(srcVar)
-                Dta%OrigUnit  = ADJUStL(srcUnit)
+                Dta%ncPara   = ADJUSTL( srcVar )
+                Dta%OrigUnit = ADJUSTL( srcUnit )
 
                 ! If the parameter ncPara is not defined, attempt to read data
                 ! directly from configuration file instead of netCDF.
@@ -973,7 +990,7 @@ CONTAINS
                 ! data that is treated in local time. The corresponding
                 ! IsLocTime flag is updated when reading the data (see
                 ! hcoio_dataread_mod.F90).
-                IF ( TRIM(Dta%ncPara) == '-' ) THEN
+                IF ( TRIM( Dta%ncPara ) == '-' ) THEN
                    Dta%ncRead    = .FALSE.
                    Dta%IsLocTime = .TRUE.
                 ENDIF
@@ -990,12 +1007,12 @@ CONTAINS
                    ENDIF
                 ENDIF
 
+#if defined(ESMF_)
                 ! In an ESMF environment, the source data will be imported
                 ! through ExtData by name, hence need to set ncFile equal to
                 ! container name!
-#if defined(ESMF_)
                 IF ( Dta%ncRead ) THEN
-                   Dta%ncFile = ADJUSTL(tagcName)
+                   Dta%ncFile = ADJUSTL( tagcName )
                 ENDIF
 #endif
 
@@ -1026,7 +1043,7 @@ CONTAINS
 
              ENDIF
 
-             ! Connect file data object of this data container.
+             ! Connect this FileData object to the HcoState%HcoConfigList.
              Lct%Dct%Dta => Dta
 
              ! Free list container for next cycle
@@ -1041,8 +1058,8 @@ CONTAINS
           ! Fill data container
           ! -------------------------------------------------------------
 
-          ! Add blank list container to ConfigList list. The container
-          ! is placed at the beginning of the list.
+          ! Add blank list container (ListCont object) to ConfigList.
+          ! The container is placed at the beginning of the list.
           CALL ConfigList_AddCont ( Lct, HcoConfig%ConfigList )
 
           ! Check if name exists already
@@ -1063,9 +1080,9 @@ CONTAINS
 
              ! Set species name, extension number, emission category,
              ! hierarchy
-             Lct%Dct%SpcName       = ADJUSTL(SpcName)
-             Lct%Dct%Hier          = Int2
-             Lct%Dct%ExtNr         = Int3
+             Lct%Dct%SpcName = ADJUSTL( SpcName )
+             Lct%Dct%Hier    = Int2
+             Lct%Dct%ExtNr   = Int3
 
              ! Extract category from character 2. This can be up to
              ! CatMax integers, or empty.
@@ -1145,32 +1162,46 @@ CONTAINS
           ! default value of -999 to be able to identify data objects
           ! used by multiple containers.
           ! -------------------------------------------------------------
-          IF ( TRIM(srcFile) == '-' ) THEN
+          IF ( TRIM( srcFile ) == '-' ) THEN
+
+             ! The current entry of the configuration file specifies that
+             ! we will get data from the file listed immediately above it.
+             ! Thus we have to reuse a previously-defined FileData object
+             ! (aka Dta).  Stop if Dta is not initialized.
              IF ( .NOT. ASSOCIATED(Dta) ) THEN
                 MSG = 'Cannot use previous data container: '//TRIM(cName)
                 CALL HCO_Error( msg, RC, thisLoc=loc)
                 RETURN
              ENDIF
+
+             ! Reuse the file metadata specified in Dta for
+             ! this entry of the HEMCO configuration file.
              Lct%Dct%DtaHome = Lct%Dct%DtaHome - 1
+
           ELSE
-             ! NOTE: FileData_Init now nullifies the Dta object
-             ! before allocation. -- Bob Yantosca (22 Aug 2022)
+
+             ! The current entry of the configuration file specifies that
+             ! we will read data from a file.  We thus need to initialize
+             ! a new FileData object to keep track of the file metadata.
+             !
+             ! >>> NOTE: This seems to cause a memory leak; <<<
+             ! >>> We will look into this at a later date   <<<
              CALL FileData_Init( Dta )
 
              ! Set source file name. Check if the read file name starts
              ! with the configuration file token '$CFDIR', in which case
              ! we replace this value with the passed CFDIR value.
-             STRLEN = LEN(srcFile)
+             STRLEN = LEN( srcFile )
              IF ( STRLEN > 6 ) THEN
                 IF ( srcFile(1:6) == '$CFDIR' ) THEN
-                   srcFile = TRIM(CFDIR) // TRIM(srcFile(7:STRLEN))
+                   srcFile = TRIM( CFDIR ) // TRIM( srcFile(7:STRLEN) )
                 ENDIF
              ENDIF
-             Dta%ncFile    = srcFile
+             Dta%ncFile   = srcFile
 
              ! Set source variable and original data unit.
-             Dta%ncPara    = ADJUSTL(srcVar)
-             Dta%OrigUnit  = ADJUStL(srcUnit)
+             Dta%ncPara   = ADJUSTL( srcVar  )
+             Dta%OrigUnit = ADJUSTL( srcUnit )
 
              ! If the parameter ncPara is not defined, attempt to read data
              ! directly from configuration file instead of netCDF.
@@ -1179,7 +1210,7 @@ CONTAINS
              ! data that is treated in local time. The corresponding
              ! IsLocTime flag is updated when reading the data (see
              ! hcoio_dataread_mod.F90).
-             IF ( TRIM(Dta%ncPara) == '-' ) THEN
+             IF ( TRIM( Dta%ncPara ) == '-' ) THEN
                 Dta%ncRead    = .FALSE.
                 Dta%IsLocTime = .TRUE.
              ENDIF
@@ -1196,12 +1227,12 @@ CONTAINS
                 ENDIF
              ENDIF
 
+#if defined(ESMF_)
              ! In an ESMF environment, the source data will be imported
              ! through ExtData by name, hence need to set ncFile equal to
              ! container name!
-#if defined(ESMF_)
              IF ( Dta%ncRead ) THEN
-                Dta%ncFile = ADJUSTL(cName)
+                Dta%ncFile = ADJUSTL( cName )
              ENDIF
 #endif
 
@@ -1232,7 +1263,7 @@ CONTAINS
 
           ENDIF
 
-          ! Connect file data object of this data container.
+          ! Connect FileData object to the HcoState%HcoConfigList
           Lct%Dct%Dta => Dta
 
           ! If a base emission field covers multiple emission categories,
@@ -1354,7 +1385,7 @@ CONTAINS
     !======================================================================
 
     ! Init
-    verb = HCO_IsVerb( HcoConfig%Err, 1 )
+    verb = HCO_IsVerb( HcoConfig%Err )
 
     ! Get name of this bracket
     IF ( STAT == 5 .OR. STAT == 6 ) THEN
@@ -1587,7 +1618,7 @@ CONTAINS
     ENDIF
 
     ! Init
-    verb = HCO_IsVerb( HcoConfig%Err, 1 )
+    verb = HCO_IsVerb( HcoConfig%Err )
     Shd  => NULL()
 
 
@@ -1614,7 +1645,7 @@ CONTAINS
     ! Add scale factor zero to it, so that emissions will all be zero.
     DO I = 2, nCat
 
-       ! Create new data container
+       ! Create new data container (ListCont object)
        CALL ConfigList_AddCont ( Shd, HcoConfig%ConfigList )
 
        ! Character of category
@@ -1750,7 +1781,7 @@ CONTAINS
        Lct%Dct%Dta => Dta
 
        ! verbose mode
-       IF ( HCO_IsVerb( HcoConfig%Err, 2 ) ) THEN
+       IF ( HCO_IsVerb( HcoConfig%Err ) ) THEN
           MSG = 'Created a fake scale factor with zeros'
           CALL HCO_MSG(HcoConfig%Err,MSG)
           MSG = 'This field will be used to artificially expand ' // &
@@ -1991,13 +2022,13 @@ CONTAINS
 ! !LOCAL VARIABLES:
 !
     ! Scalars
-    LOGICAL               :: FOUND
-    INTEGER               :: I, N, POS
-    INTEGER               :: verb
-    INTEGER               :: warn
+    LOGICAL               :: doVerbose, doVerboseOnRoot, found
+    INTEGER               :: I,         N,               POS
 
     ! Strings
-    CHARACTER(LEN=255)    :: Line
+    CHARACTER(LEN=10)     :: onCores
+    CHARACTER(LEN=15)     :: verboseMsg
+    CHARACTER(LEN=255)    :: line
     CHARACTER(LEN=255)    :: loc
     CHARACTER(LEN=255)    :: LogFile
     CHARACTER(LEN=255)    :: DiagnPrefix
@@ -2011,6 +2042,7 @@ CONTAINS
 
     ! Enter
     Loc = 'ReadSettings (hco_config_mod.F90)'
+
 
     !-----------------------------------------------------------------------
     ! Read settings and add them as options to core extensions
@@ -2105,18 +2137,47 @@ CONTAINS
     !-----------------------------------------------------------------------
     IF ( .NOT. ASSOCIATED(HcoConfig%Err) ) THEN
 
-       ! Verbose mode?
-       CALL GetExtOpt( HcoConfig, CoreNr, 'Verbose', &
-                       OptValInt=verb, FOUND=FOUND, RC=RC )
+       ! Initialize
+       doVerbose       = .FALSE.
+       doVerboseOnRoot = .FALSE.
+       onCores         = ''
+
+       ! First look for Verbose
+       CALL GetExtOpt( HcoConfig,            CoreNr,      'Verbose',         &
+                       OptValBool=doVerbose, found=found,  RC=RC            )
        IF ( RC /= HCO_SUCCESS ) THEN
-          msg = 'Error looking for "Verbose" HEMCO_Config.rc!'
+          msg = 'Error looking for "Verbose" in HEMCO_Config.rc!'
           CALL HCO_Error( msg, RC, thisLoc=loc )
           RETURN
        ENDIF
-       IF ( .NOT. FOUND ) THEN
-          verb = 3
-          WRITE(*,*) 'Setting `Verbose` not found in HEMCO logfile - use 3'
+
+       ! First look for Verbose (logical).  This is now the default
+       ! inthe HEMCO_Config.rc file for HEMCO 3.7.0 and later.
+       CALL GetExtOpt( HcoConfig,          CoreNr,      'VerboseOnCores',    &
+                       OptValChar=onCores, found=found,  RC=RC              )
+       IF ( RC /= HCO_SUCCESS ) THEN
+          msg = 'Error looking for "VerboseOnCores in HEMCO_Config.rc!'
+          CALL HCO_Error( msg, RC, thisLoc=loc )
+          RETURN
        ENDIF
+
+       ! Set a flag if Verbose output is to be done on the root core only
+       ! (if false, it will be done on all cores)
+       CALL TranLC( onCores )
+       doVerboseOnRoot = ( TRIM( onCores ) == "root" )
+
+       ! Print status message
+       IF ( doVerbose ) THEN
+          msg = NEW_LINE( 'A' ) // 'HEMCO verbose output is ON '
+          IF ( doVerboseOnRoot ) THEN
+             msg = TRIM( msg ) // ' (root core only)'
+          ELSE
+             msg = TRIM( msg ) // ' (all cores)'
+          ENDIF
+       ELSE
+          msg = NEW_LINE( 'A' ) // 'HEMCO verbose output is OFF'
+       ENDIF
+       IF ( HcoConfig%amIRoot ) CALL HCO_Msg( msg, verb=.TRUE. )
 
        ! Logfile to write into
        CALL GetExtOpt( HcoConfig, CoreNr, 'Logfile', &
@@ -2129,19 +2190,6 @@ CONTAINS
        IF ( .NOT. FOUND ) THEN
           LogFile = 'HEMCO.log'
           WRITE(*,*) 'Setting `Logfile` not found in HEMCO logfile - use `HEMCO.log`'
-       ENDIF
-
-       ! Prompt warnings to logfile?
-       CALL GetExtOpt( HcoConfig, CoreNr, 'Warnings', &
-                       OptValInt=warn, FOUND=FOUND, RC=RC  )
-       IF ( RC /= HCO_SUCCESS ) THEN
-          msg = 'Error looking for "Warnings" in HEMCO_Config.rc!'
-          CALL HCO_Error( msg, RC, thisLoc=loc )
-          RETURN
-       ENDIF
-       IF ( .NOT. FOUND ) THEN
-          warn = 3
-          WRITE(*,*) 'Setting `Warnings` not found in HEMCO logfile - use 3'
        ENDIF
 
        ! Initialize (standard) HEMCO tokens
@@ -2159,8 +2207,8 @@ CONTAINS
             LogFile = '*'
 
        ! We should now have everything to define the HEMCO error settings
-       CALL HCO_ERROR_SET( HcoConfig%amIRoot, HcoConfig%Err, LogFile, &
-                           verb, warn, RC )
+       CALL HCO_ERROR_SET( HcoConfig%amIRoot, HcoConfig%Err,   LogFile,      &
+                           doVerbose,         doVerboseOnRoot, RC           )
        IF ( RC /= HCO_SUCCESS ) THEN
           msg = 'Error encountered in routine "Hco_Error_Set"!'
           CALL HCO_Error( msg, RC, thisLoc=loc )
@@ -2260,7 +2308,7 @@ CONTAINS
     IF ( cpux2 >= 180 ) cpux2 = cpux2 - 360
 
     ! verbose
-    IF ( HCO_IsVerb(HcoState%Config%Err,1) ) THEN
+    IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
        WRITE(MSG,*) 'Start to prepare fields for registering!'
        CALL HCO_MSG(HcoState%Config%Err,MSG)
        WRITE(MSG,*) 'This CPU x-range: ', cpux1, cpux2
@@ -2282,7 +2330,7 @@ CONTAINS
        ENDIF
 
        ! verbose
-       IF ( HCO_IsVerb(HcoState%Config%Err,3) ) THEN
+       IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
           WRITE(MSG,*) 'Prepare ', TRIM(Lct%Dct%cName)
           CALL HCO_MSG(HcoState%Config%Err,MSG)
        ENDIF
@@ -2300,7 +2348,7 @@ CONTAINS
              Lct%Dct%HcoID = ThisHcoID
 
              ! verbose
-             IF ( HCO_IsVerb(HcoState%Config%Err,3) ) THEN
+             IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
                 WRITE(MSG,*) 'Assigned HEMCO species ID: ', Lct%Dct%HcoID
                 CALL HCO_MSG(HcoState%Config%Err,MSG)
              ENDIF
@@ -2369,10 +2417,25 @@ CONTAINS
           lon2 = Lct%Dct%Dta%ncMts(1)
           lat2 = Lct%Dct%Dta%ncMts(2)
 
-          ThisCover = CALC_COVERAGE( lon1,  lon2,  &
-                                     lat1,  lat2,  &
-                                     cpux1, cpux2, &
-                                     cpuy1, cpuy2   )
+          ! If ncFile is passed as the lon1/lat1/lon2/lat2 instead
+          ! of netCDF file name, then set ncRead to false, so that
+          ! HEMCO won't try to read a file from disk.  Also set the
+          ! IsLocTime flag to TRUE.  This should fix Github issue
+          ! https://github.com/geoschem/HEMCO/issues/153.
+          !  -- Bob Yantosca (12 Jul 2022)
+          !
+          ! Also allow for the .$NC replaceable token, see:
+          ! https://github.com/geoschem/HEMCO/issues/204
+          !  -- Melissa Sulprizio & Bob Yantosca (11 Apr 2023)
+          IF ( INDEX( Lct%Dct%Dta%ncFile,   ".nc" ) == 0 ) THEN
+             IF ( INDEX( Lct%Dct%Dta%ncFile, ".$NC" ) == 0 ) THEN
+                Lct%Dct%Dta%ncRead    = .FALSE.
+                Lct%Dct%Dta%IsLocTime = .TRUE.
+             ENDIF
+          ENDIF
+
+          ThisCover = CALC_COVERAGE( lon1,  lon2,  lat1,  lat2,              &
+                                     cpux1, cpux2, cpuy1, cpuy2             )
 #endif
 
           ! Update container information
@@ -2380,7 +2443,7 @@ CONTAINS
           Lct%Dct%Dta%ncYrs(:) = -999
           Lct%Dct%Dta%ncMts(:) = -999
 
-          IF ( HCO_IsVerb(HcoSTate%Config%Err,3) ) THEN
+          IF ( HCO_IsVerb(HcoSTate%Config%Err ) ) THEN
              WRITE(MSG,*) 'Coverage: ', Lct%Dct%Dta%Cover
              CALL HCO_MSG( HcoState%Config%Err, msg )
           ENDIF
@@ -2500,7 +2563,7 @@ CONTAINS
        ENDIF
 
        IF ( Ignore ) THEN
-          IF ( HCO_IsVerb(HcoState%Config%Err,1) ) THEN
+          IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
              WRITE(MSG,*) &
                   'Register_Base: Ignore (and remove) base field ', &
                   TRIM(Lct%Dct%cName)
@@ -2515,7 +2578,7 @@ CONTAINS
        ENDIF
 
        ! Verbose mode
-       IF ( HCO_IsVerb(HcoState%Config%Err,3) ) THEN
+       IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
           WRITE(MSG,*) 'Register_Base: Checking ', TRIM(Lct%Dct%cName)
           CALL HCO_MSG(HcoState%Config%Err,MSG,SEP1='-')
        ENDIF
@@ -2550,7 +2613,7 @@ CONTAINS
        ENDIF
 
        ! verbose
-       IF ( HCO_IsVerb(HcoState%Config%Err,3) ) THEN
+       IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
           WRITE(MSG,*) 'Container ID     : ', Lct%Dct%cID
           CALL HCO_MSG( HcoState%Config%Err, msg )
           WRITE(MSG,*) 'Assigned targetID: ', targetID
@@ -2583,7 +2646,7 @@ CONTAINS
        ENDIF
 
        ! Print some information if verbose mode is on
-       IF ( HCO_IsVerb(HcoState%Config%Err,2) ) THEN
+       IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
           WRITE(MSG,*) 'Base field registered: ', TRIM(Lct%Dct%cName)
           CALL HCO_MSG( HcoState%Config%Err, msg )
        ENDIF
@@ -2727,7 +2790,7 @@ CONTAINS
        ENDIF
 
        ! Print some information if verbose mode is on
-       IF ( HCO_IsVerb(HcoState%Config%Err,2) ) THEN
+       IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
           WRITE(MSG,*) 'Scale field registered: ', TRIM(Lct%Dct%cName)
           CALL HCO_MSG( HcoState%Config%Err, msg )
        ENDIF
@@ -2896,7 +2959,7 @@ CONTAINS
           IF ( (mskLct%Dct%DctType  == HCO_DCTTYPE_MASK ) .AND. &
                (mskLct%Dct%Dta%Cover == 0 )        ) THEN
              targetID = -999
-             IF ( HCO_IsVerb(HcoState%Config%Err,1) ) THEN
+             IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
                 WRITE(MSG,*) 'Data not defined over this CPU, skip ' // &
                      TRIM(Lct%Dct%cName)
                 CALL HCO_MSG( HcoState%Config%Err, msg )
@@ -3035,7 +3098,7 @@ CONTAINS
          ! replace all values of Lct. Hence, set targetID to -999
          ! (= ignore container) and return here.
        IF ( (tmpLct%Dct%Hier > Hier) .AND. (tmpCov==1) ) THEN
-          IF ( HCO_IsVerb(HcoState%Config%Err,1) ) THEN
+          IF ( HCO_IsVerb(HcoState%Config%Err ) ) THEN
              WRITE(MSG,*) 'Skip container ', TRIM(Lct%Dct%cName), &
                           ' because of ', TRIM(tmpLct%Dct%cName)
              CALL HCO_MSG( HcoState%Config%Err, msg )
@@ -4526,7 +4589,7 @@ CONTAINS
        ENDIF
 
        ! Verbose
-       IF ( HcoConfig%amIRoot .AND. HCO_IsVerb(HcoConfig%Err,2) ) THEN
+       IF ( HcoConfig%amIRoot .AND. HCO_IsVerb(HcoConfig%Err ) ) THEN
           WRITE(MSG,*) 'Will use additional dimension on file ', &
              TRIM(Dta%ncFile), ': ', TRIM(Dta%ArbDimName), ' = ', &
              TRIM(Dta%ArbDimVal)

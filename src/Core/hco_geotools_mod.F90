@@ -767,7 +767,7 @@ CONTAINS
 !
 ! !USES
 !
-    USE HCO_Arr_Mod,      ONLY : HCO_ArrAssert
+    USE HCO_Arr_Mod,      ONLY : HCO_ArrAssert, HCO_ArrCleanup
     USE HCO_STATE_MOD,    ONLY : HCO_STATE
     USE HCO_CALC_MOD,     ONLY : HCO_EvalFld
 !
@@ -830,7 +830,7 @@ CONTAINS
 
     ! Verbose statements
     IF ( HcoState%amIRoot .AND. FIRST .AND. &
-         HCO_IsVerb(HcoState%Config%Err,2) ) THEN
+         HCO_IsVerb(HcoState%Config%Err) ) THEN
        Verb = .TRUE.
     ENDIF
     IF ( Verb ) THEN
@@ -1123,9 +1123,10 @@ CONTAINS
        ENDIF
     ENDIF
 
-    ! If Box height not available make sure it is not associated
+    ! If Box height isn't available, free its memory
+    ! NOTE: Using NULL instead of deallocate here causes a memory leak! 
     IF ( .NOT. EVAL_BXHEIGHT .OR. .NOT. FoundBXHEIGHT ) THEN
-       HcoState%Grid%BXHEIGHT_M%Val => NULL()
+       CALL HCO_ArrCleanup( HcoState%Grid%BXHEIGHT_M, DeepClean=.TRUE. )
     ENDIF
 
     ! ------------------------------------------------------------------
@@ -1165,7 +1166,7 @@ CONTAINS
                    'This may affect the accuracy of vertical grid '     // &
                    'quantities. It is recommended you provide PSFC via '// &
                    'the model-HEMCO interface or the HEMCO configuration file!'
-             CALL HCO_WARNING( HcoState%Config%Err,MSG, RC, THISLOC=LOC, WARNLEV=1 )
+             CALL HCO_WARNING( HcoState%Config%Err,MSG, RC, THISLOC=LOC )
           ENDIF
 
           ! Verbose
@@ -1299,14 +1300,14 @@ CONTAINS
                    'some extensions to fail. HEMCO tries to calculate '   // &
                    'ZSFC from surface pressure and air temperature, but ' // &
                    'at least one of these variables seem to be missing.'
-             CALL HCO_WARNING( HcoState%Config%Err,MSG, RC, THISLOC=LOC, WARNLEV=1 )
+             CALL HCO_WARNING( HcoState%Config%Err,MSG, RC, THISLOC=LOC )
           ENDIF
           IF ( .NOT. FoundBXHEIGHT .AND. FIRST .AND. HcoState%amIRoot ) THEN
              MSG = 'Cannot set boxheights BXHEIGHT_M. This may cause '      // &
                    'some extensions to fail. HEMCO tries to calculate '     // &
                    'BXHEIGHT from pressure edges and air temperature, but ' // &
                    'at least one of these variables seem to be missing.'
-             CALL HCO_WARNING( HcoState%Config%Err,MSG, RC, THISLOC=LOC, WARNLEV=1 )
+             CALL HCO_WARNING( HcoState%Config%Err,MSG, RC, THISLOC=LOC )
           ENDIF
        ENDIF
     ENDIF
@@ -1406,7 +1407,7 @@ CONTAINS
        ENDIF
 
        ! Verbose
-       IF ( HcoState%amIRoot .AND. HCO_IsVerb(HcoState%Config%Err,2) ) THEN
+       IF ( HcoState%amIRoot .AND. HCO_IsVerb(HcoState%Config%Err ) ) THEN
           IF ( FOUND ) THEN
              WRITE(MSG,*) 'HEMCO PBL heights obtained from field ',TRIM(FldName)
              CALL HCO_MSG(HcoState%Config%Err,MSG,SEP2='-')
@@ -1432,7 +1433,7 @@ CONTAINS
              FOUND                       = .TRUE.
 
              ! Verbose
-             IF ( HcoState%amIRoot .AND. HCO_IsVerb(HcoState%Config%Err,2) ) THEN
+             IF ( HcoState%amIRoot .AND. HCO_IsVerb(HcoState%Config%Err ) ) THEN
                 WRITE(MSG,*) 'HEMCO PBL heights obtained from provided 2D field.'
                 CALL HCO_MSG(HcoState%Config%Err,MSG,SEP2='-')
              ENDIF
@@ -1457,7 +1458,7 @@ CONTAINS
           FOUND                       = .TRUE.
 
           ! Verbose
-          IF ( HcoState%amIRoot .AND. HCO_IsVerb(HcoState%Config%Err,2) ) THEN
+          IF ( HcoState%amIRoot .AND. HCO_IsVerb(HcoState%Config%Err ) ) THEN
              WRITE(MSG,*) 'HEMCO PBL heights uniformly set to ', DefVal
              CALL HCO_MSG(HcoState%Config%Err,MSG,SEP2='-')
           ENDIF

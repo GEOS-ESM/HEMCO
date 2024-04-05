@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TBD
+## [3.8.1] - 2024-04-02
+### Changed
+- Now allow up to 10 nested brackets (`((( )))`) in the `HEMCO_Config.rc` file
+- Now use short submodule names (i.e. w/o path) in `.gitmodules`
+
+### Fixed
+- Limit volcano climatology file read message to root core
+- Updated `hco_interp_mod.F90` to handle 3D NEI emissions.
+
+## [3.8.0] - 2024-02-07
 ### Changed
 - Updated TOMAS_Jeagle sea salt extension
 

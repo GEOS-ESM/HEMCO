@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.1] - 2024-04-02
+### Changed
+- Now allow up to 10 nested brackets (`((( )))`) in the `HEMCO_Config.rc` file
+- Now use short submodule names (i.e. w/o path) in `.gitmodules`
+
+### Fixed
+- Limit volcano climatology file read message to root core
+- Updated `hco_interp_mod.F90` to handle 3D NEI emissions.
+
+## [3.8.0] - 2024-02-07
+### Changed
+- Updated TOMAS_Jeagle sea salt extension
+
+### Fixed
+- Updated IsModelLevel check for CESM and WRF-GC
+- Interpolation error for 8-day MODIS LAI files (removed month loop in `GetIndex2Interp`)
+
+## [3.7.2] - 2023-12-01
+### Added
+- Script `.release/changeVersionNumbers.sh` to change version numbers before a new HEMCO release
+
+### Changed
+- Increased netCDF variable string length from 50 to 100
+
+### Fixed
+- Rename `HEMCO_Config.rc.sample` to `HEMCO_Config.rc` in `createRunDir.sh` if sample is used.
+- Added fix to turn off emissions extensions when `EMISSIONS` logical is false
+
 ## [3.7.1] - 2023-10-10
 ### Changed
 - Updated version numbers to 3.7.1
@@ -30,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add GEOSIT as an allowable meteorology directory name in HEMCO_Config.rc
 - Added `.readthedocs.yaml` file to configure ReadTheDocs builds
 
-# Changed
+### Changed
 - `Verbose` is now a `true/false` variable in `run/HEMCO_sa_Config.rc` and `run/HEMCO_Config.rc.sample`
 - HEMCO warnings are now only generated when `Verbose: true` is found in the HEMCO configuration file (no more numerical levels)
 - Updated GFED4 emission factors for VOCs to Andreae et al. (2019)
@@ -100,14 +128,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.5.2] - 2022-11-29
 ### Added
-- Added sanitizer option for detecting memory leaks in HEMCO
-    standalone during build
+- Added sanitizer option for detecting memory leaks in HEMCO standalone during build
 
 ### Changed
 - Remove unused, commented-out code in `src/Extensions/hcox_dustdead_mod.F`
-- Replaced placeholder error messages in
-    `src/Core/hco_config_mod.F90` with more informational messages
-    (often including the line of the HEMCO_Config.rc in the printout)
+- Replaced placeholder error messages in `src/Core/hco_config_mod.F90` with more informational messages (often including the line of the HEMCO_Config.rc in the printout)
 - Added improved documentation for time cycle flag `EFYO` in ReadTheDocs
 
 ### Fixed
@@ -121,8 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support for MAPL 2.16 (needed by GCHP and GEOS)
 - Bug fix for HEMCO standalone run directory creation
-- Bug fix: If HEMCO masks are specified as `lon1/lat1/lon2/lat2`,
-    then don't try to read from disk
+- Bug fix: If HEMCO masks are specified as `lon1/lat1/lon2/lat2`, then don't try to read from disk
 - Documentation from the GEOS-Chem wiki (now on ReadTheDocs)
 - Badges for the ReadTheDocs front page
 - Bug fix for masking issues in MPI environment (for WRF, CESM)
@@ -265,6 +289,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bug fix for distributing emissions in the vertical dimension
 - New error checks in the HEMCO standalone module
 - Bug fix for `ifort` compiler in soil NOx extension
+
 ### Removed
 - Null string character from netCDF unit string
 
@@ -280,8 +305,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.004] - 2017-12-30
 ### Added
-- Updates to remove possible issues and excessive print statements when
-    operating in GEOS environment
+- Updates to remove possible issues and excessive print statements when operating in GEOS environment
 - Fixed possible tracer ID mismatch in sea salt extension
 - New option to normalize MEGAN LAI, HEMCO diagnostics
 - Now write multiple time slices into one file
@@ -364,8 +388,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.009] - 2015-09-10
 ### Added
-- Bug fixes to allow specifying flexible diagnostics output
-    frequencies.
+- Bug fixes to allow specifying flexible diagnostics output frequencies.
 
 ## [1.1.008] - 2015-07-06
 ### Added

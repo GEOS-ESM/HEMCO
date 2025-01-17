@@ -313,10 +313,14 @@ CONTAINS
                                   1,        FLD,      RC, Arr3D=Arr3D )
     IF ( RC /= HCO_SUCCESS ) RETURN
 
+#if defined( MODEL_GEOS )
+    ! No further "local" checks are needed for GEOS
+#else
     ! If field is all zero assume it to be not filled
     IF ( FLD ) THEN
        IF ( SUM(Arr3D) == 0.0 ) FLD = .FALSE.
     ENDIF
+#endif
 
     ! Log output
     IF ( HCO_IsVerb(HcoState%Config%Err,1) ) THEN
@@ -467,10 +471,14 @@ CONTAINS
                                   1,        FLD,      RC, Arr2D=Arr2D )
     IF ( RC /= HCO_SUCCESS ) RETURN
 
+#if defined( MODEL_GEOS )
+    ! No further "local" checks are needed for GEOS
+#else
     ! If field is all zero assume it to be not filled
     IF ( FLD ) THEN
        IF ( SUM(Arr2D) == 0.0 ) FLD = .FALSE.
     ENDIF
+#endif
 
     ! Log output
     IF ( HCO_IsVerb(HcoState%Config%Err,1) ) THEN

@@ -209,7 +209,7 @@ CONTAINS
             ! Error trap
             IF ( STATUS /= ESMF_SUCCESS ) THEN
                WRITE(*,*) '2D import error: ', TRIM(CurrCont%Dct%Dta%ncFile)
-               VERIFY_(STATUS)
+               _VERIFY(STATUS)
             ENDIF
 
          ! Import 3D data: Assume central location in vertical dimension!
@@ -227,7 +227,7 @@ CONTAINS
             ! Error trap
             IF ( STATUS /= ESMF_SUCCESS ) THEN
                WRITE(*,*) '3D import error: ', TRIM(CurrCont%Dct%Dta%ncFile)
-               VERIFY_(STATUS)
+               _VERIFY(STATUS)
             ENDIF
 
          ! Return w/ error if not 2D or 3D data
@@ -356,7 +356,7 @@ CONTAINS
       IF ( ASSOCIATED(Spc) ) DEALLOCATE(Spc)
 
       ! Return success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE HCO_SetServices
 !EOC
@@ -427,7 +427,7 @@ CONTAINS
       ENDIF
 
       ! Return w/ success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE Diagn2Exp
 !EOC
@@ -556,7 +556,7 @@ CONTAINS
       ENDIF ! DoUse
 
       ! Return success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE HCO_Imp2Ext2S
 !EOC
@@ -640,7 +640,7 @@ CONTAINS
 
 
       ! Return success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE HCO_Imp2Ext3S
 !EOC
@@ -734,7 +734,7 @@ CONTAINS
       ENDIF ! DoUse
 
       ! Return success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE HCO_Imp2Ext2R
 !EOC
@@ -817,7 +817,7 @@ CONTAINS
       ENDIF ! DoUse
 
       ! Return success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE HCO_Imp2Ext3R
 !EOC
@@ -894,7 +894,7 @@ CONTAINS
       ENDIF ! DoUse
 
       ! Return success
-      RETURN_(ESMF_SUCCESS)
+      _RETURN(ESMF_SUCCESS)
 
       END SUBROUTINE HCO_Imp2Ext2I
 !EOC
